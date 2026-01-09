@@ -1,0 +1,31 @@
+version: "3.9"
+
+networks:
+  public:
+  internal:
+    internal: true   # 🔐 NOT accessible from host
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"       # 🌍 ONLY public entry point
+    networks:
+      - public
+      - internal
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    container_name: node-api
+    networks:
+      - internal     # 🔒 internal only
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    networks:
+      - internal     # 🔒 internal only
