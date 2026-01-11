@@ -25,41 +25,64 @@ export default function AIPromptChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('localhost/api/chat', {
+      //const response = await fetch('http://localhost:11434/api/chat', {  
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'qwen2-model',
-          max_tokens: 1000,
-          system: systemPrompt,
           messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content
-          }))
+          })),
+          stream: false
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const data = await response.json();
       
-      if (data.content && data.content[0]) {
-        const assistantMessage = {
-          role: 'assistant',
-          content: data.content[0].text
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        throw new Error('Invalid response');
-      }
+    //   if (data.content && data.content[0]) {
+    //     const assistantMessage = {
+    //       role: 'assistant',
+    //       content: data.content[0].text
+    //     };
+    //     setMessages(prev => [...prev, assistantMessage]);
+    //   } else {
+    //     throw new Error('Invalid response');
+    //   }
+    // } catch (err) {
+    //   console.error('Error:', err);
+    //   setMessages(prev => [...prev, {
+    //     role: 'assistant',
+    //     content: '❌ Error: Failed to get response.'
+    //   }]);
+    // } finally {
+    //   setIsLoading(false);
+    // }
+    if (data.message?.content) {
+        setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: data.message.content }
+        ]);
+    } else {
+        console.error('Unexpected Ollama response:', data);
+        throw new Error('Invalid Ollama response format');
+    }
+
     } catch (err) {
-      console.error('Error:', err);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: '❌ Error: Failed to get response.'
-      }]);
+    console.error('Chat error:', err);
+    setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: '❌ Error: Failed to get response.' }
+    ]);
     } finally {
-      setIsLoading(false);
+    setIsLoading(false);
     }
   };
 
