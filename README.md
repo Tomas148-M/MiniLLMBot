@@ -1,5 +1,8 @@
 # MiniLLMBot
 
+This repository is my miniproject where I learn how to use LLM model to generate text similar to chatGPT. Practise to use docker and also another technologies and languages like React, NodeJs, NGNIX, Python, Redis.
+This repository will be developing during I will add new things diagram is not full.  
+
 Architecture diagram and quick start.
 
 ## Architecture

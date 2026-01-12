@@ -37,6 +37,19 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+
+// Proxy to Ollama
+app.get('/api/time', async (req, res) => {
+  try {
+    res.json({message: "Hello World!"});
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+
 // Proxy to Ollama
 app.get('/api/chat2', async (req, res) => {
   try {
