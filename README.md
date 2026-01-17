@@ -14,6 +14,12 @@ Architecture diagram and quick start.
 - `backend` — Node.js Express API (internal port 5000)
 - `ollama` — local LLM runtime (internal port 11434)
 
+## To Do (Ideas)
+- Connect to Redis for casching and chat history
+- Conect to PostgreSQL
+- Connect to MCP server to get some Real Time Data
+- UI switcher of multiple AI models
+
 ## Quick Start
 
 ```bash
@@ -21,13 +27,6 @@ docker-compose up -d --build
 ```
 
 Open `http://localhost` to access the React app.
-
-
-## To Do (Ideas)
-- Connect to Redis for casching and chat history
-- Conect to PostgreSQL
-- Connect to MCP server to get some Real Time Data
-- UI switcher of multiple AI models
 
 
 ## Notes
