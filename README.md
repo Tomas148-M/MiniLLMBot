@@ -19,6 +19,7 @@ Architecture diagram and quick start.
 - Conect to PostgreSQL
 - Connect to MCP server to get some Real Time Data
 - UI switcher of multiple AI models
+- Adding JWT authentication
 
 ## Quick Start
 
@@ -28,6 +29,13 @@ docker-compose up -d --build
 
 Open `http://localhost` to access the React app.
 
+in case that there is some problem use these commands
+for backend for example
+
+```bash
+docker compose build backend
+docker compose up -d backend
+```
 
 ## Notes
 
