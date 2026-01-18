@@ -16,75 +16,75 @@ export default function AIPromptChat() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+const handleSend = async () => {
+  if (!input.trim() || isLoading) return;
 
-    const userMessage = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+  const userMessage = { role: 'user', content: input };
+  setMessages(prev => [...prev, userMessage]);
 
-    try {
-      //const response = await fetch('http://localhost:11434/api/chat', {  
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'qwen2-model',
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-          stream: false
-        })
-      });
+  setInput('');
+  setIsLoading(true);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+  // Add empty assistant message (will be filled token-by-token)
+  let assistantIndex;
+  setMessages(prev => {
+    assistantIndex = prev.length + 1;
+    return [...prev, { role: 'assistant', content: '' }];
+  });
+
+  try {
+    const response = await fetch('/api/chatstream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'qwen2-model',
+        messages: [...messages, userMessage],
+        stream: true
+      })
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Ollama sends NDJSON (one JSON per line)
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        const data = JSON.parse(line);
+
+        if (data.message?.content) {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1].content += data.message.content;
+            return updated;
+          });
+        }
+
+        if (data.done) {
+          setIsLoading(false);
+        }
       }
-
-      const data = await response.json();
-      
-    //   if (data.content && data.content[0]) {
-    //     const assistantMessage = {
-    //       role: 'assistant',
-    //       content: data.content[0].text
-    //     };
-    //     setMessages(prev => [...prev, assistantMessage]);
-    //   } else {
-    //     throw new Error('Invalid response');
-    //   }
-    // } catch (err) {
-    //   console.error('Error:', err);
-    //   setMessages(prev => [...prev, {
-    //     role: 'assistant',
-    //     content: '❌ Error: Failed to get response.'
-    //   }]);
-    // } finally {
-    //   setIsLoading(false);
-    // }
-    if (data.message?.content) {
-        setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: data.message.content }
-        ]);
-    } else {
-        console.error('Unexpected Ollama response:', data);
-        throw new Error('Invalid Ollama response format');
     }
-
-    } catch (err) {
-    console.error('Chat error:', err);
+  } catch (err) {
+    console.error('Streaming error:', err);
     setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: '❌ Error: Failed to get response.' }
+      ...prev,
+      { role: 'assistant', content: '❌ Streaming failed.' }
     ]);
-    } finally {
     setIsLoading(false);
-    }
-  };
+  }
+};
 
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: '#121212', color: '#fff' }}>
