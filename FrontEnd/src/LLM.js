@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import Sidebar from './components/Sidebar';
-import ChatMessages from './components/ChatMessages';
-import ChatInput from './components/ChatInput';
+import Sidebar from '../components/Sidebar';
+import ChatMessages from '../components/ChatMessages';
+import ChatInput from '../components/ChatInput';
 
 export default function LLM2() {
   const [messages, setMessages] = useState([]);
