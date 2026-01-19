@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import Sidebar from './Sidebar';
-import ChatMessages from './ChatMessages';
-import ChatInput from './ChatInput';
+import Sidebar from '../components/Sidebar';
+import ChatMessages from '../components/ChatMessages';
+import ChatInput from '../components/ChatInput';
 
 export default function AIPromptChat() {
   const [messages, setMessages] = useState([]);
