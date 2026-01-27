@@ -12,7 +12,7 @@ export default function Sidebar({ systemPrompt, setSystemPrompt, clearChat }) {
         onChange={e => setSystemPrompt(e.target.value)}
         placeholder="Enter your system prompt..."
           style={{
-            width: '100%',
+            width: '92%',
             height: '256px',
             padding: '12px',
             backgroundColor: '#2a2a2a',
