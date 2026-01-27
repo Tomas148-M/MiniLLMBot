@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 export default function Sidebar({ systemPrompt, setSystemPrompt, clearChat }) {
   return (
     <div>
-      <h2 style={{ width: 320, backgroundColor: '#1e1e1e', padding: 24 }}>
+      <h2 style={{ width: '92%', backgroundColor: '#1e1e1e', padding: 24 }}>
         System Prompt
       </h2>
 
