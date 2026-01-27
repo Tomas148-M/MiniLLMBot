@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
-import ChatMessages from '../components/ChatMessages';
-import ChatInput from '../components/ChatInput';
+import Sidebar from './Sidebar';
+import ChatMessages from './ChatMessages';
+import ChatInput from './ChatInput';
 
 export default function AIPromptChat() {
   const [messages, setMessages] = useState([]);
@@ -74,14 +74,14 @@ export default function AIPromptChat() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#121212', color: '#fff' }}>
+    <div style={{ display: 'flex', backgroundColor: '#121212', color: '#fff' }}>
       <Sidebar
         systemPrompt={systemPrompt}
         setSystemPrompt={setSystemPrompt}
         clearChat={() => setMessages([])}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, height: '100vh',display: 'flex', flexDirection: 'column' }}>
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
