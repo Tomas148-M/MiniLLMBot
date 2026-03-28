@@ -33,3 +33,7 @@ Thumbs.db
 
 # Misc
 .cache/
+
+# Python
+__pycache__/
+*.pyc
