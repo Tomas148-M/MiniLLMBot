@@ -2,7 +2,7 @@
 
 from fastmcp import FastMCP
 
-from MCP.tools import (
+from ..tools import (
     register_greeting_tools,
     register_math_tools,
     register_text_tools,

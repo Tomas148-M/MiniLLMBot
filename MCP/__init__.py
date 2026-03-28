@@ -1,6 +1,6 @@
 """MCP package entrypoints and server factory access."""
 
-from MCP.servers.utility_server import create_utility_server
+from .servers.utility_server import create_utility_server
 
 SERVER_BUILDERS = {
     "utility": create_utility_server,

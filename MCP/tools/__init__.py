@@ -1,9 +1,9 @@
 """Tool registration helpers for MCP servers."""
 
-from MCP.tools.greeting_tools import register_greeting_tools
-from MCP.tools.math_tools import register_math_tools
-from MCP.tools.text_tools import register_text_tools
-from MCP.tools.time_tool import register_time_tools
+from .greeting_tools import register_greeting_tools
+from .math_tools import register_math_tools
+from .text_tools import register_text_tools
+from .time_tool import register_time_tools
 
 
 __all__ = [
