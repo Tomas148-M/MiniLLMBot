@@ -15,9 +15,10 @@ Architecture diagram and quick start.
 - `ollama` — local LLM runtime (internal port 11434)
 
 ## To Do (Ideas)
+- Connect to MCP server to get some Real Time Data (In progress)
+- Create and connect to RAG pipeline
 - Connect to Redis for casching and chat history
 - Conect to PostgreSQL
-- Connect to MCP server to get some Real Time Data
 - UI switcher of multiple AI models
 - Adding JWT authentication
 
