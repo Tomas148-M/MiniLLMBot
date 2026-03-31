@@ -1,9 +1,6 @@
-import asyncio
-import argparse
 import json
 import logging
 import os
-import sys
 from typing import Any
 
 import ollama
@@ -104,7 +101,7 @@ class OllamaMCPClient:
         except Exception as e:
             logger.error("ERROR connecting to MCP server: %s", e)
             logger.error("Make sure the server is running: python mcp_server.py")
-            sys.exit(1)
+            raise RuntimeError(f"MCP connection failed: {e}") from e
 
     async def execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Execute a named MCP tool and return its result payload."""
@@ -206,91 +203,6 @@ class OllamaMCPClient:
         """Send a single user prompt and return the chat result payload."""
         return await self.run_chat([{"role": "user", "content": prompt}])
 
-    async def stdin_loop(self) -> None:
-        """Wait for stdin questions and answer each one without re-initializing tools."""
-        logger.info("Waiting for questions on stdin. Type 'exit' to stop.")
-        while True:
-            line = await asyncio.to_thread(sys.stdin.readline)
-            if not line:
-                logger.info("Stdin closed. Exiting.")
-                return
-
-            question = line.strip()
-            if not question:
-                continue
-            if question.lower() in {"exit", "quit"}:
-                logger.info("Exit command received. Stopping.")
-                return
-
-            result = await self.ask(question)
-            print(json.dumps(result), flush=True)
-
-
-def parse_args() -> argparse.Namespace:
-    """Build and parse command-line arguments for this client."""
-    parser = argparse.ArgumentParser(description="Run Ollama client with optional MCP tools.")
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        default=None,
-        help="Single user prompt to send to Ollama.",
-    )
-    parser.add_argument(
-        "--messages",
-        type=str,
-        default=None,
-        help='JSON array of chat messages, e.g. \'[{"role":"user","content":"Hello"}]\'',
-    )
-    return parser.parse_args()
-
-
-def parse_messages_arg(messages_arg: str) -> list[dict[str, Any]]:
-    """Parse and validate JSON `--messages` payload."""
-    payload = json.loads(messages_arg)
-    if not isinstance(payload, list):
-        raise ValueError("--messages must be a JSON list")
-    return payload
-
-
-async def main() -> None:
-    """Parse CLI arguments, execute chat flow, and print machine-readable JSON output."""
-    args = parse_args()
-    client = await OllamaMCPClient.from_env_initialized()
-
-    if args.prompt is not None:
-        try:
-            result = await client.ask(args.prompt)
-            print(json.dumps(result))
-            return
-        except Exception as e:
-            logger.error("Unhandled error: %s", e)
-            print(json.dumps({"error": str(e)}))
-            sys.exit(1)
-
-    if args.messages is not None:
-        try:
-            messages = parse_messages_arg(args.messages)
-        except Exception as e:
-            print(json.dumps({"error": f"Invalid --messages payload: {e}"}))
-            sys.exit(2)
-
-        try:
-            result = await client.run_chat(messages)
-            print(json.dumps(result))
-            return
-        except Exception as e:
-            logger.error("Unhandled error: %s", e)
-            print(json.dumps({"error": str(e)}))
-            sys.exit(1)
-
-    try:
-        await client.stdin_loop()
-    except Exception as e:
-        logger.error("Unhandled error in stdin loop: %s", e)
-        print(json.dumps({"error": str(e)}))
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    asyncio.run(main())
+    async def chat(self, prompt: str) -> dict[str, Any]:
+        """Compatibility wrapper for API handlers expecting a `chat(prompt)` method."""
+        return await self.ask(prompt)
