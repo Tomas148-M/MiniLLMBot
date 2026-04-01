@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -82,26 +83,41 @@ class OllamaMCPClient:
 
     async def load_mcp_tools(self) -> list[dict[str, Any]]:
         """Connect to MCP and convert server tools to Ollama function-tool schema."""
-        try:
-            async with MCPClient(self.mcp_server_url) as mcp:
-                tools_list = await mcp.list_tools()
-                ollama_tools = []
-                for tool in tools_list:
-                    ollama_tools.append(
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": tool.name,
-                                "description": tool.description,
-                                "parameters": tool.inputSchema,
-                            },
-                        }
-                    )
-                return ollama_tools
-        except Exception as e:
-            logger.error("ERROR connecting to MCP server: %s", e)
-            logger.error("Make sure the server is running: python mcp_server.py")
-            raise RuntimeError(f"MCP connection failed: {e}") from e
+        last_error: Exception | None = None
+        attempts = 10
+        delay_seconds = 2
+
+        for attempt in range(1, attempts + 1):
+            try:
+                async with MCPClient(self.mcp_server_url) as mcp:
+                    tools_list = await mcp.list_tools()
+                    ollama_tools = []
+                    for tool in tools_list:
+                        ollama_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool.name,
+                                    "description": tool.description,
+                                    "parameters": tool.inputSchema,
+                                },
+                            }
+                        )
+                    return ollama_tools
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "MCP connection attempt %s/%s failed: %s",
+                    attempt,
+                    attempts,
+                    e,
+                )
+                if attempt < attempts:
+                    await asyncio.sleep(delay_seconds)
+
+        logger.error("ERROR connecting to MCP server after %s attempts", attempts)
+        logger.error("Make sure the server is running and reachable at %s", self.mcp_server_url)
+        raise RuntimeError(f"MCP connection failed: {last_error}") from last_error
 
     async def execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Execute a named MCP tool and return its result payload."""
@@ -133,6 +149,27 @@ class OllamaMCPClient:
         self.tools = await self.load_mcp_tools()
         logger.info("Loaded %s tools", len(self.tools))
 
+    @staticmethod
+    def _to_dict(payload: Any) -> dict[str, Any]:
+        """Normalize Ollama SDK responses into plain dictionaries."""
+        if isinstance(payload, dict):
+            return payload
+
+        if hasattr(payload, "model_dump"):
+            dumped = payload.model_dump()
+            if isinstance(dumped, dict):
+                return dumped
+
+        if hasattr(payload, "dict"):
+            dumped = payload.dict()
+            if isinstance(dumped, dict):
+                return dumped
+
+        if hasattr(payload, "__dict__"):
+            return dict(payload.__dict__)
+
+        return {"response": str(payload)}
+
     async def run_chat(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         """Run a chat completion using preloaded model/tools and return final output."""
         if not messages:
@@ -142,20 +179,24 @@ class OllamaMCPClient:
 
         tools_enabled = True
         try:
-            response = self.ollama_client.chat(
-                model=self.model_name,
-                messages=messages,
-                tools=self.tools,
-                stream=False,
+            response = self._to_dict(
+                self.ollama_client.chat(
+                    model=self.model_name,
+                    messages=messages,
+                    tools=self.tools,
+                    stream=False,
+                )
             )
         except Exception as e:
             if "does not support tools" in str(e):
                 tools_enabled = False
                 logger.warning("Model does not support Ollama tools; retrying without tools.")
-                response = self.ollama_client.chat(
-                    model=self.model_name,
-                    messages=messages,
-                    stream=False,
+                response = self._to_dict(
+                    self.ollama_client.chat(
+                        model=self.model_name,
+                        messages=messages,
+                        stream=False,
+                    )
                 )
             else:
                 logger.error("ERROR calling Ollama: %s", e)
@@ -196,13 +237,31 @@ class OllamaMCPClient:
                 }
             )
 
-        final = self.ollama_client.chat(model=self.model_name, messages=conversation)
+        final = self._to_dict(
+            self.ollama_client.chat(model=self.model_name, messages=conversation)
+        )
         return final
 
     async def ask(self, prompt: str) -> dict[str, Any]:
         """Send a single user prompt and return the chat result payload."""
+        print(f"Ask called with prompt: {prompt}")
         return await self.run_chat([{"role": "user", "content": prompt}])
 
     async def chat(self, prompt: str) -> dict[str, Any]:
         """Compatibility wrapper for API handlers expecting a `chat(prompt)` method."""
+        print(f"Chat called with prompt: {prompt}")
         return await self.ask(prompt)
+
+# async def main() -> None:
+#     """Main entry point to demonstrate chat functionality."""
+#     client = await OllamaMCPClient.from_env_initialized()
+    
+#     prompt = "What is the current time?"
+#     response = await client.chat(prompt)
+    
+#     logger.info("Response: %s", response)
+#     print(response)
+
+
+# if __name__ == "__main__":
+#     asyncio.run(main())
