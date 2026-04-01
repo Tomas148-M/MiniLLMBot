@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, AsyncIterator
 
 import ollama
 from fastmcp import Client as MCPClient
@@ -124,6 +124,11 @@ class OllamaMCPClient:
         try:
             async with MCPClient(self.mcp_server_url) as mcp:
                 result = await mcp.call_tool(tool_name, arguments)
+                # FastMCP returns CallToolResult wrappers; unwrap for cleaner LLM context.
+                if hasattr(result, "data"):
+                    return result.data
+                if hasattr(result, "structured_content"):
+                    return result.structured_content
                 return result
         except Exception as e:
             logger.error("ERROR executing tool %s: %s", tool_name, e)
@@ -170,7 +175,7 @@ class OllamaMCPClient:
 
         return {"response": str(payload)}
 
-    async def run_chat(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
+    async def run_chat(self, messages: list[dict[str, Any],], stream: bool = False) -> dict[str, Any]:
         """Run a chat completion using preloaded model/tools and return final output."""
         if not messages:
             messages = [{"role": "user", "content": "time is?"}]
@@ -184,7 +189,7 @@ class OllamaMCPClient:
                     model=self.model_name,
                     messages=messages,
                     tools=self.tools,
-                    stream=False,
+                    stream=stream,
                 )
             )
         except Exception as e:
@@ -195,7 +200,7 @@ class OllamaMCPClient:
                     self.ollama_client.chat(
                         model=self.model_name,
                         messages=messages,
-                        stream=False,
+                        stream=stream,
                     )
                 )
             else:
@@ -242,15 +247,71 @@ class OllamaMCPClient:
         )
         return final
 
-    async def ask(self, prompt: str) -> dict[str, Any]:
+    async def stream_chat(self, messages: list[dict[str, Any]]) -> AsyncIterator[dict[str, Any]]:
+        """Yield chat chunks as plain dictionaries for NDJSON/SSE streaming."""
+        if not messages:
+            messages = [{"role": "user", "content": "time is?"}]
+
+        # First pass decides whether tools are required.
+        initial = self._to_dict(
+            self.ollama_client.chat(
+                model=self.model_name,
+                messages=messages,
+                tools=self.tools,
+                stream=False,
+            )
+        )
+
+        tool_calls = initial.get("message", {}).get("tool_calls") or []
+        if not tool_calls:
+            stream_iter = self.ollama_client.chat(
+                model=self.model_name,
+                messages=messages,
+                stream=True,
+            )
+            for chunk in stream_iter:
+                yield self._to_dict(chunk)
+            return
+
+        conversation = [*messages, initial["message"]]
+        for tool_call in tool_calls:
+            tool_name = tool_call["function"]["name"]
+            args = tool_call["function"]["arguments"]
+
+            if isinstance(args, str):
+                args = json.loads(args)
+
+            logger.info("Stream tool requested: %s", tool_name)
+            logger.info("Stream tool args: %s", args)
+            tool_result = await self.execute_tool(tool_name, args)
+
+            conversation.append(
+                {
+                    "role": "tool",
+                    "content": json.dumps(tool_result)
+                    if isinstance(tool_result, dict)
+                    else str(tool_result),
+                }
+            )
+
+        stream_iter = self.ollama_client.chat(
+            model=self.model_name,
+            messages=conversation,
+            stream=True,
+        )
+        for chunk in stream_iter:
+            yield self._to_dict(chunk)
+
+    async def ask(self, prompt: str, stream: bool = False) -> dict[str, Any]:
         """Send a single user prompt and return the chat result payload."""
         print(f"Ask called with prompt: {prompt}")
-        return await self.run_chat([{"role": "user", "content": prompt}])
+        print(f"Stream mode: {stream}")
+        return await self.run_chat([{"role": "user", "content": prompt}], stream=stream)
 
-    async def chat(self, prompt: str) -> dict[str, Any]:
+    async def chat(self, prompt: str, stream: bool = False) -> dict[str, Any]:
         """Compatibility wrapper for API handlers expecting a `chat(prompt)` method."""
         print(f"Chat called with prompt: {prompt}")
-        return await self.ask(prompt)
+        return await self.ask(prompt, stream=stream)
 
 # async def main() -> None:
 #     """Main entry point to demonstrate chat functionality."""

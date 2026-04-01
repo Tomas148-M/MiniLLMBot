@@ -1,7 +1,9 @@
+import json
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from starlette.responses import StreamingResponse
 
 from .client_ollama import OllamaMCPClient
 
@@ -46,5 +48,23 @@ async def chat(data: ChatRequest) -> dict[str, Any]:
     if client is None:
         raise HTTPException(status_code=503, detail="Ollama client is not initialized")
 
-    response = await client.chat(data.prompt)
+    response = await client.chat(data.prompt, stream=False)
     return normalize_response(response)
+
+
+@app.post("/chatstream")
+async def chatstream(data: ChatRequest) -> StreamingResponse:
+    print(f"Received stream chat request with prompt: {data.prompt}")
+    client: OllamaMCPClient | None = getattr(app.state, "ollama_client", None)
+    if client is None:
+        raise HTTPException(status_code=503, detail="Ollama client is not initialized")
+
+    async def event_stream():
+        async for chunk in client.stream_chat([{"role": "user", "content": data.prompt}]):
+            yield json_dumps(chunk) + "\n"
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+def json_dumps(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=False)
