@@ -2,12 +2,16 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Self, TypeAlias
 
 import ollama
 from fastmcp import Client as MCPClient
 
 logger = logging.getLogger(__name__)
+
+JsonDict: TypeAlias = dict[str, Any]
+Message: TypeAlias = dict[str, Any]
+ToolSpec: TypeAlias = dict[str, Any]
 
 
 class OllamaMCPClient:
@@ -19,10 +23,10 @@ class OllamaMCPClient:
         self.mcp_server_url = mcp_server_url
         self.ollama_client = ollama.Client(host=ollama_host)
         self.model_name: str = ollama_model
-        self.tools: list[dict[str, Any]] = []
+        self.tools: list[ToolSpec] = []
 
     @classmethod
-    def from_env(cls) -> "OllamaMCPClient":
+    def from_env(cls: type[Self]) -> Self:
         return cls(
             ollama_model=os.getenv("OLLAMA_MODEL", "llama3.2:latest"),
             ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11435"),
@@ -30,7 +34,7 @@ class OllamaMCPClient:
         )
 
     @classmethod
-    async def from_env_initialized(cls) -> "OllamaMCPClient":
+    async def from_env_initialized(cls: type[Self]) -> Self:
         """Create and initialize a ready-to-use client in one line."""
         client = cls.from_env()
         await client.initialize_runtime()
@@ -81,7 +85,7 @@ class OllamaMCPClient:
         except Exception:
             return []
 
-    async def load_mcp_tools(self) -> list[dict[str, Any]]:
+    async def load_mcp_tools(self) -> list[ToolSpec]:
         """Connect to MCP and convert server tools to Ollama function-tool schema."""
         last_error: Exception | None = None
         attempts = 10
@@ -155,7 +159,7 @@ class OllamaMCPClient:
         logger.info("Loaded %s tools", len(self.tools))
 
     @staticmethod
-    def _to_dict(payload: Any) -> dict[str, Any]:
+    def _to_dict(payload: Any) -> JsonDict:
         """Normalize Ollama SDK responses into plain dictionaries."""
         if isinstance(payload, dict):
             return payload
@@ -175,7 +179,61 @@ class OllamaMCPClient:
 
         return {"response": str(payload)}
 
-    async def run_chat(self, messages: list[dict[str, Any],], stream: bool = False) -> dict[str, Any]:
+    def _chat_to_dict(self, *, messages: list[Message], stream: bool, tools: bool = False) -> JsonDict:
+        """Wrapper around Ollama chat that always returns a dictionary payload."""
+        kwargs: JsonDict = {
+            "model": self.model_name,
+            "messages": messages,
+            "stream": stream,
+        }
+        if tools:
+            kwargs["tools"] = self.tools
+        return self._to_dict(self.ollama_client.chat(**kwargs))
+
+    @staticmethod
+    def _parse_tool_args(args: Any) -> JsonDict:
+        """Normalize tool arguments into a dictionary."""
+        if isinstance(args, str):
+            return json.loads(args)
+        return args if isinstance(args, dict) else {}
+
+    @staticmethod
+    def _tool_content(tool_result: Any) -> str:
+        """Serialize tool result into content accepted by Ollama chat."""
+        return json.dumps(tool_result) if isinstance(tool_result, dict) else str(tool_result)
+
+    async def _apply_tool_calls(
+        self,
+        *,
+        conversation: list[Message],
+        tool_calls: list[ToolSpec],
+        stream_logs: bool = False,
+    ) -> list[Message]:
+        """Execute tool calls and append each tool response to the conversation."""
+        for tool_call in tool_calls:
+            tool_name = tool_call["function"]["name"]
+            args = self._parse_tool_args(tool_call["function"]["arguments"])
+
+            if stream_logs:
+                logger.info("Stream tool requested: %s", tool_name)
+                logger.info("Stream tool args: %s", args)
+            else:
+                logger.info("Tool requested: %s", tool_name)
+                logger.info("Arguments: %s", args)
+
+            tool_result = await self.execute_tool(tool_name, args)
+            if not stream_logs:
+                logger.info("Tool result: %s", tool_result)
+
+            conversation.append(
+                {
+                    "role": "tool",
+                    "content": self._tool_content(tool_result),
+                }
+            )
+        return conversation
+
+    async def run_chat(self, messages: list[Message], stream: bool = False) -> JsonDict:
         """Run a chat completion using preloaded model/tools and return final output."""
         if not messages:
             messages = [{"role": "user", "content": "time is?"}]
@@ -184,25 +242,12 @@ class OllamaMCPClient:
 
         tools_enabled = True
         try:
-            response = self._to_dict(
-                self.ollama_client.chat(
-                    model=self.model_name,
-                    messages=messages,
-                    tools=self.tools,
-                    stream=stream,
-                )
-            )
+            response = self._chat_to_dict(messages=messages, tools=True, stream=stream)
         except Exception as e:
             if "does not support tools" in str(e):
                 tools_enabled = False
                 logger.warning("Model does not support Ollama tools; retrying without tools.")
-                response = self._to_dict(
-                    self.ollama_client.chat(
-                        model=self.model_name,
-                        messages=messages,
-                        stream=stream,
-                    )
-                )
+                response = self._chat_to_dict(messages=messages, stream=stream)
             else:
                 logger.error("ERROR calling Ollama: %s", e)
                 logger.error("Make sure:")
@@ -219,48 +264,20 @@ class OllamaMCPClient:
             return response
 
         conversation = [*messages, response["message"]]
-
-        for tool_call in response["message"]["tool_calls"]:
-            tool_name = tool_call["function"]["name"]
-            args = tool_call["function"]["arguments"]
-
-            if isinstance(args, str):
-                args = json.loads(args)
-
-            logger.info("Tool requested: %s", tool_name)
-            logger.info("Arguments: %s", args)
-
-            tool_result = await self.execute_tool(tool_name, args)
-            logger.info("Tool result: %s", tool_result)
-
-            conversation.append(
-                {
-                    "role": "tool",
-                    "content": json.dumps(tool_result)
-                    if isinstance(tool_result, dict)
-                    else str(tool_result),
-                }
-            )
-
-        final = self._to_dict(
-            self.ollama_client.chat(model=self.model_name, messages=conversation)
+        conversation = await self._apply_tool_calls(
+            conversation=conversation,
+            tool_calls=response["message"]["tool_calls"],
         )
+        final = self._chat_to_dict(messages=conversation, stream=False)
         return final
 
-    async def stream_chat(self, messages: list[dict[str, Any]]) -> AsyncIterator[dict[str, Any]]:
+    async def stream_chat(self, messages: list[Message]) -> AsyncIterator[JsonDict]:
         """Yield chat chunks as plain dictionaries for NDJSON/SSE streaming."""
         if not messages:
             messages = [{"role": "user", "content": "time is?"}]
 
         # First pass decides whether tools are required.
-        initial = self._to_dict(
-            self.ollama_client.chat(
-                model=self.model_name,
-                messages=messages,
-                tools=self.tools,
-                stream=False,
-            )
-        )
+        initial = self._chat_to_dict(messages=messages, tools=True, stream=False)
 
         tool_calls = initial.get("message", {}).get("tool_calls") or []
         if not tool_calls:
@@ -274,25 +291,11 @@ class OllamaMCPClient:
             return
 
         conversation = [*messages, initial["message"]]
-        for tool_call in tool_calls:
-            tool_name = tool_call["function"]["name"]
-            args = tool_call["function"]["arguments"]
-
-            if isinstance(args, str):
-                args = json.loads(args)
-
-            logger.info("Stream tool requested: %s", tool_name)
-            logger.info("Stream tool args: %s", args)
-            tool_result = await self.execute_tool(tool_name, args)
-
-            conversation.append(
-                {
-                    "role": "tool",
-                    "content": json.dumps(tool_result)
-                    if isinstance(tool_result, dict)
-                    else str(tool_result),
-                }
-            )
+        conversation = await self._apply_tool_calls(
+            conversation=conversation,
+            tool_calls=tool_calls,
+            stream_logs=True,
+        )
 
         stream_iter = self.ollama_client.chat(
             model=self.model_name,
@@ -302,27 +305,13 @@ class OllamaMCPClient:
         for chunk in stream_iter:
             yield self._to_dict(chunk)
 
-    async def ask(self, prompt: str, stream: bool = False) -> dict[str, Any]:
+    async def ask(self, prompt: str, stream: bool = False) -> JsonDict:
         """Send a single user prompt and return the chat result payload."""
         print(f"Ask called with prompt: {prompt}")
         print(f"Stream mode: {stream}")
         return await self.run_chat([{"role": "user", "content": prompt}], stream=stream)
 
-    async def chat(self, prompt: str, stream: bool = False) -> dict[str, Any]:
+    async def chat(self, prompt: str, stream: bool = False) -> JsonDict:
         """Compatibility wrapper for API handlers expecting a `chat(prompt)` method."""
         print(f"Chat called with prompt: {prompt}")
         return await self.ask(prompt, stream=stream)
-
-# async def main() -> None:
-#     """Main entry point to demonstrate chat functionality."""
-#     client = await OllamaMCPClient.from_env_initialized()
-    
-#     prompt = "What is the current time?"
-#     response = await client.chat(prompt)
-    
-#     logger.info("Response: %s", response)
-#     print(response)
-
-
-# if __name__ == "__main__":
-#     asyncio.run(main())
