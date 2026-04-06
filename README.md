@@ -7,7 +7,7 @@ Architecture diagram and quick start.
 
 ## Architecture
 
-![Architecture](docs/SystemDiagram.svg)
+<img src="docs/SystemDiagram.svg" alt="Architecture" width="850" />
 
 - `nginx` — reverse proxy exposing port 80 on host
 - `frontend` — React app (served as static files)
