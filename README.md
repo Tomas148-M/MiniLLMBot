@@ -13,6 +13,8 @@ Architecture diagram and quick start.
 - `frontend` — React app (served as static files)
 - `backend` — Node.js Express API (internal port 5000)
 - `ollama` — local LLM runtime (internal port 11434)
+- `client` — comunication among ollama model and MCP server
+- `AI service` — endpoint for client
 
 ## To Do (Ideas)
 - Connect to Redis for casching and chat history
