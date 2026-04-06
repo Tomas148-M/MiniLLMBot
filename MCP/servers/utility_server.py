@@ -2,8 +2,6 @@
 
 from fastmcp import FastMCP
 
-from MCP.tools.mcp_wheather import register_weather_tools
-
 from ..tools import (
     register_greeting_tools,
     register_math_tools,
@@ -26,7 +24,7 @@ def create_utility_server(name: str = "Utility MCP Server") -> FastMCP:
 
 def main() -> None:
     """Run utility server over SSE."""
-    create_utility_server().run(transport="sse", port=8080)
+    create_utility_server().run(transport="sse", host="0.0.0.0", port=8080)
 
 
 if __name__ == "__main__":

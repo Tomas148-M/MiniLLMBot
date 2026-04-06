@@ -13,4 +13,4 @@ WORKDIR /app
 
 EXPOSE 8080
 
-CMD ["python", "-m", "MCP.main"]
+CMD ["python", "-m", "MCP.servers.utility_server"]
