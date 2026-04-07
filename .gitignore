@@ -30,6 +30,8 @@ Thumbs.db
 
 # Docker
 .dockerignore
+LLM_FineTunning/blobs/
+LLM_FineTunning/manifests/
 
 # Misc
 .cache/

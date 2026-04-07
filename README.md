@@ -43,3 +43,4 @@ docker compose up -d backend
 
 - Use `docker-compose logs -f <service>` to inspect logs
 - `depends_on` controls container startup order but not readiness; use healthchecks if needed
+- MCP server support is implemented, but with the current Ollama model the tool-calling success rate is low, so behavior can be inconsistent.
