@@ -1,0 +1,25 @@
+{
+  "ollama": {
+    "model": "llama3.2:latest",
+    "host": "http://127.0.0.1:11435",
+    "project_model_candidates": [
+      "llama3.2-3b-local:latest",
+      "llama3.2-3b-local"
+    ],
+    "default_user_prompt": "time is?",
+    "tools_unsupported_error_marker": "does not support tools"
+  },
+  "mcp": {
+    "server_url": "http://127.0.0.1:8080/sse",
+    "connect_attempts": 10,
+    "retry_delay_seconds": 2
+  },
+  "api": {
+    "chat_path": "/chat",
+    "chat_stream_path": "/chatstream",
+    "stream_media_type": "application/x-ndjson",
+    "startup_message": "Starting up Ollama client...",
+    "client_not_initialized_detail": "Ollama client is not initialized",
+    "json_ensure_ascii": false
+  }
+}

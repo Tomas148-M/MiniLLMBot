@@ -1,6 +1,7 @@
 # MiniLLMBot
+MiniLLMBot is a personal learning project to build a full local AI app and understand how model serving, APIs, and UI work together in one Dockerized system.
 
-MiniLLMBot is a learning project that combines:
+Technologies used:
 
 - React frontend
 - Node.js backend API
@@ -45,6 +46,18 @@ OLLAMA_MODEL=llama3.2:latest
 ```
 
 Tip: for reproducible setup, use a fixed model tag instead of `latest`.
+
+AI service constants are centralized in:
+
+- `AI_Service/app_config.json`
+
+Optional override for that file path:
+
+```env
+AI_SERVICE_CONFIG_FILE=/absolute/path/to/app_config.json
+```
+
+Docker env vars like `OLLAMA_MODEL`, `OLLAMA_HOST`, and `MCP_SERVER_URL` still override JSON values.
 
 ### 3. Start the app
 

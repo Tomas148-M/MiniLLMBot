@@ -1,11 +1,12 @@
 import asyncio
 import json
 import logging
-import os
 from typing import Any, AsyncIterator, Self, TypeAlias
 
 import ollama
 from fastmcp import Client as MCPClient
+
+from .config import AppConfig, settings
 
 logger = logging.getLogger(__name__)
 
@@ -17,21 +18,18 @@ ToolSpec: TypeAlias = dict[str, Any]
 class OllamaMCPClient:
     """Class-based Ollama + MCP orchestration client."""
 
-    def __init__(self, ollama_model: str, ollama_host: str, mcp_server_url: str) -> None:
-        self.ollama_model = ollama_model
-        self.ollama_host = ollama_host
-        self.mcp_server_url = mcp_server_url
-        self.ollama_client = ollama.Client(host=ollama_host)
-        self.model_name: str = ollama_model
+    def __init__(self, config: AppConfig) -> None:
+        self.config = config
+        self.ollama_model = config.ollama.model
+        self.ollama_host = config.ollama.host
+        self.mcp_server_url = config.mcp.server_url
+        self.ollama_client = ollama.Client(host=self.ollama_host)
+        self.model_name: str = self.ollama_model
         self.tools: list[ToolSpec] = []
 
     @classmethod
     def from_env(cls: type[Self]) -> Self:
-        return cls(
-            ollama_model=os.getenv("OLLAMA_MODEL", "llama3.2:latest"),
-            ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11435"),
-            mcp_server_url=os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8080/sse"),
-        )
+        return cls(config=settings)
 
     @classmethod
     async def from_env_initialized(cls: type[Self]) -> Self:
@@ -59,12 +57,7 @@ class OllamaMCPClient:
                 if latest in available:
                     return latest
 
-            # Common local aliases used in this project.
-            project_candidates = [
-                "llama3.2-3b-local:latest",
-                "llama3.2-3b-local",
-            ]
-            for candidate in project_candidates:
+            for candidate in self.config.ollama.project_model_candidates:
                 if candidate in available:
                     return candidate
 
@@ -88,8 +81,8 @@ class OllamaMCPClient:
     async def load_mcp_tools(self) -> list[ToolSpec]:
         """Connect to MCP and convert server tools to Ollama function-tool schema."""
         last_error: Exception | None = None
-        attempts = 10
-        delay_seconds = 2
+        attempts = self.config.mcp.connect_attempts
+        delay_seconds = self.config.mcp.retry_delay_seconds
 
         for attempt in range(1, attempts + 1):
             try:
@@ -236,7 +229,7 @@ class OllamaMCPClient:
     async def run_chat(self, messages: list[Message], stream: bool = False) -> JsonDict:
         """Run a chat completion using preloaded model/tools and return final output."""
         if not messages:
-            messages = [{"role": "user", "content": "time is?"}]
+            messages = [{"role": "user", "content": self.config.ollama.default_user_prompt}]
 
         logger.info("Incoming message count: %s", len(messages))
 
@@ -244,7 +237,7 @@ class OllamaMCPClient:
         try:
             response = self._chat_to_dict(messages=messages, tools=True, stream=stream)
         except Exception as e:
-            if "does not support tools" in str(e):
+            if self.config.ollama.tools_unsupported_error_marker in str(e):
                 tools_enabled = False
                 logger.warning("Model does not support Ollama tools; retrying without tools.")
                 response = self._chat_to_dict(messages=messages, stream=stream)
@@ -274,7 +267,7 @@ class OllamaMCPClient:
     async def stream_chat(self, messages: list[Message]) -> AsyncIterator[JsonDict]:
         """Yield chat chunks as plain dictionaries for NDJSON/SSE streaming."""
         if not messages:
-            messages = [{"role": "user", "content": "time is?"}]
+            messages = [{"role": "user", "content": self.config.ollama.default_user_prompt}]
 
         # First pass decides whether tools are required.
         initial = self._chat_to_dict(messages=messages, tools=True, stream=False)
