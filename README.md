@@ -1,46 +1,113 @@
 # MiniLLMBot
 
-This repository is my miniproject where I learn how to use LLM model to generate text similar to chatGPT. Practise to use docker and also another technologies and languages like React, NodeJs, NGNIX, Python, Redis.
-This repository will be developing during I will add new things diagram is not full.  
+MiniLLMBot is a learning project that combines:
 
-Architecture diagram and quick start.
+- React frontend
+- Node.js backend API
+- Python AI service
+- Ollama local LLM runtime
+- MCP server tools
+- Nginx reverse proxy
 
 ## Architecture
 
 <img src="docs/SystemDiagram.svg" alt="Architecture" width="850" />
 
-- `nginx` — reverse proxy exposing port 80 on host
-- `frontend` — React app (served as static files)
-- `backend` — Node.js Express API (internal port 5000)
-- `ollama` — local LLM runtime (internal port 11434)
-- `client` — comunication among ollama model and MCP server
-- `AI service` — endpoint for client
+Main services:
 
-## To Do (Ideas)
-- Connect to Redis for casching and chat history
-- Conect to PostgreSQL
-- Connect to MCP server to get some Real Time Data
-- UI switcher of multiple AI models
-- Adding JWT authentication
+- `nginx`: public entry point on port `80`
+- `frontend`: React app
+- `backend`: Node API on port `5000`
+- `ai-service`: Python AI layer
+- `ollama`: local model runtime on port `11434`
+- `ollama-init`: one-time model pull at startup
+- `mcp`: MCP server on port `8080`
 
-## Quick Start
+## Quick Start (Docker)
 
-```bash
-docker-compose up -d --build
-```
+### 1. Prerequisites
 
-Open `http://localhost` to access the React app.
+- Docker Desktop installed and running
+- Docker Compose v2 (`docker compose`)
 
-in case that there is some problem use these commands
-for backend for example
+### 2. Clone and configure env
 
 ```bash
-docker compose build backend
-docker compose up -d backend
+git clone <your-repo-url>
+cd MiniLLMBot
+cp .env.example .env
 ```
+
+If you want a different model, edit `.env`:
+
+```env
+OLLAMA_MODEL=llama3.2:latest
+```
+
+Tip: for reproducible setup, use a fixed model tag instead of `latest`.
+
+### 3. Start the app
+
+```bash
+docker compose up -d --build
+```
+
+On first run:
+
+- `ollama-init` waits for Ollama
+- checks whether `OLLAMA_MODEL` exists
+- pulls it if missing
+- then `ai-service` starts
+
+So newcomers do not need to manually copy `blobs/` or `manifests/`.
+
+### 4. Open the app
+
+- Frontend: `http://localhost`
+- Backend API: `http://localhost:5000`
+- Ollama API: `http://localhost:11434`
+
+## Verify Everything Is Ready
+
+```bash
+docker compose ps
+docker compose logs -f ollama-init ai-service
+```
+
+Expected behavior:
+
+- `ollama-init` finishes with success
+- `ai-service` starts after that
+
+## Useful Commands
+
+```bash
+docker compose logs -f <service>
+docker compose restart <service>
+docker compose build <service>
+docker compose up -d <service>
+docker compose down
+```
+
+## Troubleshooting
+
+- If model download is slow, wait longer on first run (can be several GB).
+- If `ollama-init` fails, check:
+  - internet access
+  - model name in `.env`
+  - logs: `docker compose logs -f ollama-init`
+- If frontend is up but chat fails, inspect:
+  - `docker compose logs -f backend ai-service mcp`
 
 ## Notes
 
-- Use `docker-compose logs -f <service>` to inspect logs
-- `depends_on` controls container startup order but not readiness; use healthchecks if needed
-- MCP server support is implemented, but with the current Ollama model the tool-calling success rate is low, so behavior can be inconsistent.
+- `LLM_FineTunning/blobs` and `LLM_FineTunning/manifests` are intentionally not committed.
+- Ollama data is stored in Docker volume `ollama_data`.
+
+## To Do (Ideas)
+
+- Connect Redis for cache and chat history
+- Connect PostgreSQL
+- Improve MCP tool-calling reliability
+- Add model switcher in UI
+- Add JWT authentication
