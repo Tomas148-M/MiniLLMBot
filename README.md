@@ -1,5 +1,7 @@
 # MiniLLMBot
-Full-stack LLM tool running locally using Ollama. Built with FastAPI (backend), React (frontend) and Docker. Supports extensibility via MCP.
+Full-stack LLM application using FastAPI, React and Docker.
+Runs locally with Ollama and supports modular extensions (MCP).
+
 It is personal learning project to build a full local AI app and understand how model serving, APIs, and UI work together in one Dockerized system.
 
 Technologies used:
