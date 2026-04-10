@@ -13,69 +13,76 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'backend running' });
 });
 
-
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages } = req.body; // expect array from frontend
-    console.log('🔥🔥🔥 BACKEND CODE VERSION 2026-01-18 🔥🔥🔥');
-    console.log('Backend received messages:', messages);
+    const { messages } = req.body;
 
-    const ollamaUrl = process.env.OLLAMA_URL || 'localhost:11434';
-    console.log('Backend Ollama URL: -> ', ollamaUrl);
-    const response = await axios.post(`${ollamaUrl}/api/chat`, {
-      model: 'qwen2-model',
-      messages: messages,  // <- important
-      stream: false
-    });
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'messages must be a non-empty array' });
+    }
 
-    console.log('Ollama response:', response.data);
+    const lastMessage = messages[messages.length - 1];
+    const prompt = typeof lastMessage?.content === 'string' ? lastMessage.content : '';
 
-    res.json(response.data);  // send exact JSON to frontend
+    if (!prompt) {
+      return res.status(400).json({ error: 'last message content must be a non-empty string' });
+    }
+
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:8000';
+    const response = await axios.post(`${aiServiceUrl}/chat`, { prompt });
+    return res.json(response.data);
   } catch (error) {
     console.error('Error in /api/chat:', error.message, error.response?.data);
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 });
-
 
 app.post('/api/chatstream', async (req, res) => {
   try {
     const { messages } = req.body;
 
-    const ollamaUrl = process.env.OLLAMA_URL || 'localhost:11434';
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'messages must be a non-empty array' });
+    }
 
-    const ollamaResponse = await axios.post(
-      `${ollamaUrl}/api/chat`,
-      {
-        model: 'qwen2-model',
-        messages,
-        stream: true
-      },
-      {
-        responseType: 'stream'
-      }
+    const lastMessage = messages[messages.length - 1];
+    const prompt = typeof lastMessage?.content === 'string' ? lastMessage.content : '';
+    if (!prompt) {
+      return res.status(400).json({ error: 'last message content must be a non-empty string' });
+    }
+
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:8000';
+    const aiStreamResponse = await axios.post(
+      `${aiServiceUrl}/chatstream`,
+      { prompt },
+      { responseType: 'stream' }
     );
 
-    // IMPORTANT HEADERS
-    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Pipe Ollama stream → client
-    ollamaResponse.data.on('data', chunk => {
+    aiStreamResponse.data.on('data', (chunk) => {
       res.write(chunk);
     });
 
-    ollamaResponse.data.on('end', () => {
+    aiStreamResponse.data.on('end', () => {
       res.end();
     });
 
+    aiStreamResponse.data.on('error', (streamErr) => {
+      console.error('Error in upstream stream:', streamErr.message);
+      res.end();
+    });
   } catch (error) {
-    console.error('Streaming error:', error.message);
-    res.status(500).end();
+    console.error('Error in /api/chatstream:', error.message, error.response?.data);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.end();
+    }
   }
 });
-
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
