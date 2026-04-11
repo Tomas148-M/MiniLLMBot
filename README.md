@@ -1,6 +1,3 @@
-## Demo view
-<img src="docs/demo_screen.png" alt="demo" width="450" />
-
 # MiniLLMBot
 Full-stack LLM application using FastAPI, React and Docker.
 Runs locally with Ollama and supports modular extensions (MCP).
@@ -15,6 +12,9 @@ Technologies used:
 - Ollama local LLM runtime
 - MCP server tools
 - Nginx reverse proxy
+
+## Demo view
+<img src="docs/demo_screen.png" alt="demo" width="450" />
 
 ## Architecture
 
