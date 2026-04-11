@@ -1,43 +1,138 @@
-/* .App {
-  text-align: center;
-  padding: 20px;
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at top, #0f172a, #020617);
 }
 
-.App h1 {
-  color: #333;
+.app {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #e2e8f0;
 }
 
-.App form {
-  display: flex;
-  gap: 10px;
-  margin: 20px 0;
-  justify-content: center;
+.container {
+    width: 90vw;
+    max-width: 1100px;
+    height: 92vh;
+    border-radius: 20px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.App input {
-  padding: 10px;
-  width: 300px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.App button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.title {
+    font-weight: 600;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-.App button:hover {
-  background-color: #0056b3;
+.menu { display: flex; gap: 8px; }
+
+.menuButton {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.6);
+    color: #e2e8f0;
+    cursor: pointer;
+    font-size: 12px;
 }
 
-.response {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  text-align: left;
-} */
+.menuButton:hover { background: rgba(56, 189, 248, 0.2); }
+
+.chat {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.message {
+    margin: 10px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    width: fit-content;
+    max-width: 85%;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 20px;
+}
+
+.user {
+    margin-left: auto;
+    background: linear-gradient(135deg, #38bdf8, #6366f1);
+    color: white;
+}
+
+.bot {
+    background: rgba(148, 163, 184, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.inputArea {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    gap: 8px;
+}
+
+.input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.8);
+    color: white;
+    outline: none;
+    font-size: 20px;
+}
+
+.button {
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #22d3ee, #6366f1);
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+}
+.deleteButton {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    background: red;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.voiceButton {
+    padding: 10px;
+    border-radius: 50%;
+    border: none;
+    background: #22d3ee;
+    color: white;
+    cursor: pointer;
+}
+
+.voiceButton.active { background: #ef4444; }
