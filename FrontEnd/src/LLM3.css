@@ -116,6 +116,15 @@ body {
     cursor: pointer;
     font-size: 20px;
 }
+.deleteButton {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    background: red;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+}
 
 .voiceButton {
     padding: 10px;

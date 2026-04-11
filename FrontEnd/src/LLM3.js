@@ -124,6 +124,7 @@ export default function App() {
         <div className="container">
           <div className="header">
             <div className="title">⚡ LOCAL AI</div>
+            <button className="deleteButton" onClick={() => setMessages([])}>Clear chat</button>
           </div>
 
           <div className="chat" ref={chatRef}>
