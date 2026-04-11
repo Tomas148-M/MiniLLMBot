@@ -27,6 +27,9 @@ Main services:
 - `ollama-init`: one-time model pull at startup
 - `mcp`: MCP server on port `8080`
 
+## Demo view
+<img src="docs/demo_screen.png" alt="demo" width="450" />
+
 ## Quick Start (Docker)
 
 ### 1. Prerequisites
