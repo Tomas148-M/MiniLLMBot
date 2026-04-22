@@ -304,6 +304,11 @@ class OllamaMCPClient:
         print(f"Stream mode: {stream}")
         return await self.run_chat([{"role": "user", "content": prompt}], stream=stream)
 
+    async def chat_messages(self, messages: list[Message], stream: bool = False) -> JsonDict:
+        """Send a full chat history and return the chat result payload."""
+        print(f"Chat called with {len(messages)} messages")
+        return await self.run_chat(messages, stream=stream)
+
     async def chat(self, prompt: str, stream: bool = False) -> JsonDict:
         """Compatibility wrapper for API handlers expecting a `chat(prompt)` method."""
         print(f"Chat called with prompt: {prompt}")

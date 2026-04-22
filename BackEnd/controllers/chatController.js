@@ -1,18 +1,28 @@
 const axios = require('axios');
 
-function getPromptFromMessages(messages) {
+function getMessagesPayload(messages) {
   if (!Array.isArray(messages) || messages.length === 0) {
     return { error: 'messages must be a non-empty array' };
   }
 
-  const lastMessage = messages[messages.length - 1];
-  const prompt = typeof lastMessage?.content === 'string' ? lastMessage.content : '';
+  const normalizedMessages = messages
+    .map((message) => ({
+      role: typeof message?.role === 'string' ? message.role : '',
+      content: typeof message?.content === 'string' ? message.content : '',
+    }))
+    .filter((message) => message.role && message.content);
 
-  if (!prompt) {
-    return { error: 'last message content must be a non-empty string' };
+  if (normalizedMessages.length === 0) {
+    return { error: 'messages must include role and content' };
   }
 
-  return { prompt };
+  const lastMessage = normalizedMessages[normalizedMessages.length - 1];
+
+  if (lastMessage.role !== 'user') {
+    return { error: 'last message role must be user' };
+  }
+
+  return { messages: normalizedMessages };
 }
 
 function getAiServiceUrl() {
@@ -29,14 +39,17 @@ async function healthCheck(req, res) {
 
 async function chat(req, res) {
   try {
-    const { messages } = req.body;
-    const { prompt, error } = getPromptFromMessages(messages);
+    const { messages, system } = req.body;
+    const { messages: normalizedMessages, error } = getMessagesPayload(messages);
 
     if (error) {
       return sendValidationError(res, error);
     }
 
-    const response = await axios.post(`${getAiServiceUrl()}/chat`, { prompt });
+    const response = await axios.post(`${getAiServiceUrl()}/chat`, {
+      messages: normalizedMessages,
+      system,
+    });
     return res.json(response.data);
   } catch (requestError) {
     console.error('Error in /api/chat:', requestError.message, requestError.response?.data);
@@ -46,8 +59,8 @@ async function chat(req, res) {
 
 async function chatStream(req, res) {
   try {
-    const { messages } = req.body;
-    const { prompt, error } = getPromptFromMessages(messages);
+    const { messages, system } = req.body;
+    const { messages: normalizedMessages, error } = getMessagesPayload(messages);
 
     if (error) {
       return sendValidationError(res, error);
@@ -55,7 +68,10 @@ async function chatStream(req, res) {
 
     const aiStreamResponse = await axios.post(
       `${getAiServiceUrl()}/chatstream`,
-      { prompt },
+      {
+        messages: normalizedMessages,
+        system,
+      },
       { responseType: 'stream' }
     );
 
