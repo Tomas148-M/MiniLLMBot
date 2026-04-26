@@ -13,6 +13,11 @@ Technologies used:
 - MCP server tools
 - Nginx reverse proxy
 
+Dependency manifests in the repo:
+
+- `BackEnd/package.json` and `FrontEnd/package.json` for Node.js services
+- `AI_Service/requirements.txt` and `MCP/requirements.txt` for Python services
+
 ## Demo view
 <img src="docs/demo_screen.png" alt="demo" width="450" />
 
@@ -80,6 +85,17 @@ On first run:
 - then `ai-service` starts
 
 So newcomers do not need to manually copy `blobs/` or `manifests/`.
+
+## Local Dependency Install
+
+If you want to run parts of the project outside Docker, install dependencies per service:
+
+```bash
+cd BackEnd && npm install
+cd FrontEnd && npm install
+cd AI_Service && pip install -r requirements.txt
+cd MCP && pip install -r requirements.txt
+```
 
 ### 4. Open the app
 

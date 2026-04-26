@@ -1,0 +1,6 @@
+fastapi
+fastmcp
+ollama
+pydantic
+requests
+uvicorn
