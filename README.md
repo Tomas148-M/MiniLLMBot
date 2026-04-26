@@ -125,9 +125,8 @@ docker compose down
 - Ollama data is stored in Docker volume `ollama_data`.
 
 ## To Do (Ideas)
-
-- Connect Redis for cache and chat history
 - Connect PostgreSQL
-- Improve MCP tool-calling reliability
 - Add model switcher in UI
 - Add JWT authentication
+- Add STT input and TTS output
+- Connect to RAG
