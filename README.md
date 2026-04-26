@@ -129,3 +129,4 @@ docker compose down
 - Add model switcher in UI
 - Add JWT authentication
 - Add STT input and TTS output
+- Connect to RAG
