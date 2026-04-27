@@ -1,4 +1,4 @@
-# MiniLLMBot
+# Local AI Assistant with MCP Tooling
 Full-stack LLM application using FastAPI, React and Docker.
 Runs locally with Ollama and supports modular extensions (MCP).
 
