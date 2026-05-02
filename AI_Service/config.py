@@ -32,10 +32,19 @@ class APIConfig:
 
 
 @dataclass(frozen=True)
+class RAGConfig:
+    enabled: bool
+    top_k: int
+    max_context_chars: int
+    system_prompt_prefix: str
+
+
+@dataclass(frozen=True)
 class AppConfig:
     ollama: OllamaConfig
     mcp: MCPConfig
     api: APIConfig
+    rag: RAGConfig
 
 
 def _read_json_config() -> dict[str, Any]:
@@ -74,6 +83,7 @@ def load_settings() -> AppConfig:
     ollama_raw = raw.get("ollama", {}) if isinstance(raw.get("ollama"), dict) else {}
     mcp_raw = raw.get("mcp", {}) if isinstance(raw.get("mcp"), dict) else {}
     api_raw = raw.get("api", {}) if isinstance(raw.get("api"), dict) else {}
+    rag_raw = raw.get("rag", {}) if isinstance(raw.get("rag"), dict) else {}
 
     ollama = OllamaConfig(
         model=os.getenv("OLLAMA_MODEL", _read_str(ollama_raw, "model", "llama3.2:latest")),
@@ -107,7 +117,20 @@ def load_settings() -> AppConfig:
         ),
         json_ensure_ascii=_read_bool(api_raw, "json_ensure_ascii", False),
     )
-    return AppConfig(ollama=ollama, mcp=mcp, api=api)
+    rag = RAGConfig(
+        enabled=_read_bool(rag_raw, "enabled", False),
+        top_k=_read_int(rag_raw, "top_k", 4),
+        max_context_chars=_read_int(rag_raw, "max_context_chars", 4000),
+        system_prompt_prefix=_read_str(
+            rag_raw,
+            "system_prompt_prefix",
+            (
+                "Use the retrieved context below when it is relevant. "
+                "If the context is insufficient, say so and avoid inventing facts."
+            ),
+        ),
+    )
+    return AppConfig(ollama=ollama, mcp=mcp, api=api, rag=rag)
 
 
 settings = load_settings()
