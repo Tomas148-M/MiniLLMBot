@@ -75,6 +75,25 @@ async def startup_event() -> None:
     app.state.ollama_client = await OllamaMCPClient.from_env_initialized()
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "service": "ai-service"}
+
+
+@app.get("/ready")
+async def ready() -> dict[str, Any]:
+    client: OllamaMCPClient | None = getattr(app.state, "ollama_client", None)
+    if client is None:
+        raise HTTPException(status_code=503, detail=settings.api.client_not_initialized_detail)
+
+    return {
+        "status": "ready",
+        "service": "ai-service",
+        "model": client.model_name,
+        "tools_loaded": len(client.tools),
+    }
+
+
 @app.post(settings.api.chat_path)
 async def chat(data: ChatRequest) -> dict[str, Any]:
     messages = build_messages(data)

@@ -15,8 +15,16 @@ services:
       - public
       - internal
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
 
   frontend:
@@ -30,7 +38,14 @@ services:
       - REACT_APP_API_URL=http://nginx/api
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   backend:
     build: ./BackEnd
@@ -46,7 +61,14 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     depends_on:
-      - ollama
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   ollama:
     image: ollama/ollama
@@ -93,6 +115,12 @@ services:
         condition: service_completed_successfully
       mcp:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     restart: unless-stopped
 
   mcp:

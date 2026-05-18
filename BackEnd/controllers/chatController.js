@@ -37,6 +37,24 @@ async function healthCheck(req, res) {
   return res.json({ status: 'ok', service: 'backend running' });
 }
 
+async function readyCheck(req, res) {
+  try {
+    const response = await axios.get(`${getAiServiceUrl()}/ready`, { timeout: 3000 });
+    return res.json({
+      status: 'ready',
+      service: 'backend',
+      aiService: response.data,
+    });
+  } catch (requestError) {
+    console.error('Error in /api/ready:', requestError.message, requestError.response?.data);
+    return res.status(503).json({
+      status: 'not_ready',
+      service: 'backend',
+      error: requestError.message,
+    });
+  }
+}
+
 async function chat(req, res) {
   try {
     const { messages, system } = req.body;
@@ -108,6 +126,7 @@ async function chatStream(req, res) {
 
 module.exports = {
   healthCheck,
+  readyCheck,
   chat,
   chatStream,
 };
