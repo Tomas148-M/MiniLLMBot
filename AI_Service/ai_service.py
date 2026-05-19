@@ -31,6 +31,7 @@ class ChatRequest(BaseModel):
     prompt: str | None = Field(default=None, max_length=MAX_MESSAGE_CONTENT_CHARS)
     messages: list[ChatMessage] | None = None
     system: str | None = Field(default=None, max_length=MAX_SYSTEM_PROMPT_CHARS)
+    use_rag: bool = False
 
 
 @asynccontextmanager

@@ -67,6 +67,18 @@ function getSystemPromptPayload(system) {
   return { system: normalizedSystem };
 }
 
+function getRagPayload(useRag) {
+  if (useRag === undefined || useRag === null) {
+    return { useRag: false };
+  }
+
+  if (typeof useRag !== 'boolean') {
+    return { error: 'use_rag must be a boolean' };
+  }
+
+  return { useRag };
+}
+
 function getAiServiceUrl() {
   return process.env.AI_SERVICE_URL || 'http://ai-service:8000';
 }
@@ -99,9 +111,10 @@ async function readyCheck(req, res) {
 
 async function chat(req, res) {
   try {
-    const { messages, system } = req.body;
+    const { messages, system, use_rag: useRag } = req.body;
     const { messages: normalizedMessages, error } = getMessagesPayload(messages);
     const { system: normalizedSystem, error: systemError } = getSystemPromptPayload(system);
+    const { useRag: normalizedUseRag, error: ragError } = getRagPayload(useRag);
 
     if (error) {
       return sendValidationError(res, error);
@@ -111,9 +124,14 @@ async function chat(req, res) {
       return sendValidationError(res, systemError);
     }
 
+    if (ragError) {
+      return sendValidationError(res, ragError);
+    }
+
     const response = await axios.post(`${getAiServiceUrl()}/chat`, {
       messages: normalizedMessages,
       system: normalizedSystem,
+      use_rag: normalizedUseRag,
     });
     return res.json(response.data);
   } catch (requestError) {
@@ -124,9 +142,10 @@ async function chat(req, res) {
 
 async function chatStream(req, res) {
   try {
-    const { messages, system } = req.body;
+    const { messages, system, use_rag: useRag } = req.body;
     const { messages: normalizedMessages, error } = getMessagesPayload(messages);
     const { system: normalizedSystem, error: systemError } = getSystemPromptPayload(system);
+    const { useRag: normalizedUseRag, error: ragError } = getRagPayload(useRag);
 
     if (error) {
       return sendValidationError(res, error);
@@ -136,11 +155,16 @@ async function chatStream(req, res) {
       return sendValidationError(res, systemError);
     }
 
+    if (ragError) {
+      return sendValidationError(res, ragError);
+    }
+
     const aiStreamResponse = await axios.post(
       `${getAiServiceUrl()}/chatstream`,
       {
         messages: normalizedMessages,
         system: normalizedSystem,
+        use_rag: normalizedUseRag,
       },
       { responseType: 'stream' }
     );
