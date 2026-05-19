@@ -27,4 +27,5 @@ def get_time() -> str:
 
 def register_time_tools(mcp) -> None:
     """Register time tools on a FastMCP instance."""
+    mcp.tool()(get_current_time)
     mcp.tool()(get_time)

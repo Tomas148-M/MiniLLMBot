@@ -28,12 +28,12 @@ Dependency manifests in the repo:
 Main services:
 
 - `nginx`: public entry point on port `80`
-- `frontend`: React app
-- `backend`: Node API on port `5000`
-- `ai-service`: Python AI layer
-- `ollama`: local model runtime on port `11434`
+- `frontend`: React app, internal only
+- `backend`: Node API, internal only
+- `ai-service`: Python AI layer, internal only
+- `ollama`: local model runtime, internal only
 - `ollama-init`: one-time model pull at startup
-- `mcp`: MCP server on port `8080`
+- `mcp`: MCP server, internal only
 
 
 ## Quick Start (Docker)
@@ -100,8 +100,9 @@ cd MCP && pip install -r requirements.txt
 ### 4. Open the app
 
 - Frontend: `http://localhost`
-- Backend API: `http://localhost:5000`
-- Ollama API: `http://localhost:11434`
+- Backend API: `http://localhost/api`
+
+Only `nginx` is published to the host. Backend, AI service, MCP, and Ollama communicate over the internal Docker network.
 
 ## Verify Everything Is Ready
 
@@ -113,7 +114,14 @@ docker compose logs -f ollama-init ai-service
 Expected behavior:
 
 - `ollama-init` finishes with success
-- `ai-service` starts after that
+- `ai-service` starts after that and becomes healthy
+- `backend`, `frontend`, and `nginx` become healthy after their dependencies are ready
+
+Health endpoints exposed through nginx:
+
+- `http://localhost/health` - nginx health check
+- `http://localhost/api/health` - backend process health
+- `http://localhost/api/ready` - backend readiness including AI service readiness
 
 ## Useful Commands
 
