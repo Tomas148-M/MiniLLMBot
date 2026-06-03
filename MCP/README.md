@@ -4,7 +4,6 @@ This package is now organized to support many tools and many server configuratio
 
 ## Structure
 
-- `MCP/__init__.py`: server registry + `create_server()` factory
 - `MCP/servers/`: each file builds one MCP server
 - `MCP/tools/`: tool modules grouped by domain
 
@@ -19,7 +18,7 @@ This package is now organized to support many tools and many server configuratio
 
 1. Create file `MCP/servers/<server_name>.py`.
 2. Build a `FastMCP` instance and register selected tool groups.
-3. Add it to `SERVER_BUILDERS` in `MCP/__init__.py`.
+3. Add a Docker or script entrypoint if the server should run independently.
 
 ## Run
 

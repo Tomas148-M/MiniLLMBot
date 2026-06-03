@@ -1,11 +1,12 @@
-import requests
-
 """Weather-related MCP tools."""
+
+import requests
 
 
 def get_weather(name: str = "Brno") -> str:
-    """Get current weather (currently supports Brno)."""
-    if (name or "Brno").strip().lower() != "brno":
+    """Get current weather for a supported city."""
+    city = (name or "Brno").strip()
+    if city.lower() != "brno":
         return "Unsupported city. Currently supported city: Brno."
 
     response = requests.get(
@@ -25,8 +26,8 @@ def get_weather(name: str = "Brno") -> str:
     )
 
 
-def get_string(key: str = "") -> str:
-    """Compatibility alias for weather queries. Use key='weather' or empty key."""
+def get_weather_string(key: str = "weather") -> str:
+    """Compatibility alias for simple weather queries."""
     normalized_key = (key or "weather").strip().lower()
     if normalized_key != "weather":
         return f"Unsupported key: {key}. Supported key: weather."
@@ -36,3 +37,4 @@ def get_string(key: str = "") -> str:
 def register_weather_tools(mcp) -> None:
     """Register weather tools on a FastMCP instance."""
     mcp.tool()(get_weather)
+    mcp.tool()(get_weather_string)

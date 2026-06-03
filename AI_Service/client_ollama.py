@@ -14,6 +14,14 @@ JsonDict: TypeAlias = dict[str, Any]
 Message: TypeAlias = dict[str, Any]
 ToolSpec: TypeAlias = dict[str, Any]
 
+MCP_GROUNDING_PROMPT = (
+    "When MCP tool results are present in the conversation, treat those results as the "
+    "authoritative source of truth for the answer. Answer directly from the MCP data. "
+    "Do not add boilerplate such as not having access to real-time data, suggesting the "
+    "user verify the answer on the web, or disclaiming freshness when the MCP data "
+    "answers the question."
+)
+
 
 class OllamaMCPClient:
     """Class-based Ollama + MCP orchestration client."""
@@ -184,6 +192,20 @@ class OllamaMCPClient:
         return self._to_dict(self.ollama_client.chat(**kwargs))
 
     @staticmethod
+    def _with_mcp_grounding_prompt(messages: list[Message]) -> list[Message]:
+        """Add internal instructions for answers grounded by MCP tool results."""
+        if messages and messages[0].get("role") == "system":
+            return [
+                {
+                    **messages[0],
+                    "content": f"{messages[0].get('content', '')}\n\n{MCP_GROUNDING_PROMPT}",
+                },
+                *messages[1:],
+            ]
+
+        return [{"role": "system", "content": MCP_GROUNDING_PROMPT}, *messages]
+
+    @staticmethod
     def _parse_tool_args(args: Any) -> JsonDict:
         """Normalize tool arguments into a dictionary."""
         if isinstance(args, str):
@@ -261,6 +283,7 @@ class OllamaMCPClient:
             conversation=conversation,
             tool_calls=response["message"]["tool_calls"],
         )
+        conversation = self._with_mcp_grounding_prompt(conversation)
         final = self._chat_to_dict(messages=conversation, stream=False)
         return final
 
@@ -289,6 +312,7 @@ class OllamaMCPClient:
             tool_calls=tool_calls,
             stream_logs=True,
         )
+        conversation = self._with_mcp_grounding_prompt(conversation)
 
         stream_iter = self.ollama_client.chat(
             model=self.model_name,
