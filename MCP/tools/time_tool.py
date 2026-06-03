@@ -1,11 +1,33 @@
 """Time-related MCP tools."""
 
+import os
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+
+DEFAULT_TIMEZONE = "Europe/Prague"
+
+
+def _local_now() -> datetime:
+    """Return current time in the configured local timezone."""
+    timezone_name = os.getenv("TIMEZONE") or os.getenv("TZ") or DEFAULT_TIMEZONE
+    for zone_name in (timezone_name, DEFAULT_TIMEZONE):
+        try:
+            return datetime.now(ZoneInfo(zone_name))
+        except ZoneInfoNotFoundError:
+            continue
+    return datetime.now().astimezone()
 
 
 def get_current_time() -> str:
-    """Get current time formatted for speech."""
-    now = datetime.now()
+    """
+    Return the real current local date and time from the system clock.
+
+    Use this tool whenever the user asks for the current time, today's date,
+    what day it is, or a natural spoken answer about the present moment. This
+    result is live and should be used instead of estimating from model memory.
+    """
+    now = _local_now()
 
     hour = now.hour % 12 or 12
     minute = now.strftime("%M")
@@ -21,8 +43,14 @@ def get_current_time() -> str:
 
 
 def get_time() -> str:
-    """Get the current local time in HH:MM AM/PM format."""
-    return datetime.now().strftime("%I:%M %p")
+    """
+    Return the real current local time from the system clock in HH:MM AM/PM format.
+
+    Use this tool for short answers to questions like "what time is it?" or
+    "current time". This result is live and should be used instead of estimating
+    from model memory.
+    """
+    return _local_now().strftime("%I:%M %p")
 
 
 def register_time_tools(mcp) -> None:
